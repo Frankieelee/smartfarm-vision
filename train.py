@@ -42,9 +42,9 @@ class Logger:
 # 3. 'custom'     - 自定义+迁移：yaml+预训练权重（适合：改架构+迁移学习）
 
 MODEL_CONFIG = {
-    'type': 'custom',                                              # 'scratch', 'pretrained', 'custom'
-    'path': 'ultralytics/cfg/models/sf/yolo26_p2_cbam.yaml',      # yaml文件或.pt文件
-    'pretrained': 'yolo26n.pt',                                    # 预训练权重（仅custom模式需要）
+    'type': 'custom',
+    'path': 'ultralytics/cfg/models/sf/yolo11n_cbam.yaml',
+    'pretrained': 'yolo11n.pt',        # 官方预训练权重
 }
 
 # ========== 快速切换示例 ==========
@@ -74,7 +74,7 @@ MODEL_CONFIG = {
 #    }
 
 # ========== 数据配置 ==========
-DATA_PATH = './datasets/seedTrueLeaf.v4i.yolo26/data.yaml'
+DATA_PATH = '/root/autodl-tmp/seedTure7i/data.yaml'
 
 # ========== 训练参数 ==========
 TRAIN_ARGS = {
