@@ -12,31 +12,25 @@ import torch.nn as nn
 
 from ultralytics.nn.autobackend import check_class_names
 from ultralytics.nn.modules import (
-    AIFI,
-    C1,
-    C2,
-    C2PSA,
-    C3,
-    C3TR,
-    ELAN1,
-    OBB,
-    OBB26,
-    PSA,
-    SPP,
-    SPPELAN,
-    SPPF,
     A2C2f,
     AConv,
     ADown,
+    AIFI,
     Bottleneck,
     BottleneckCSP,
+    C1,
+    C2,
+    C2PSA,
     C2f,
     C2fAttn,
     C2fCIB,
     C2fPSA,
+    C3,
     C3Ghost,
+    C3TR,
     C3k2,
     C3x,
+    CBAM,
     CBFuse,
     CBLinear,
     Classify,
@@ -44,9 +38,10 @@ from ultralytics.nn.modules import (
     Conv,
     Conv2,
     ConvTranspose,
-    Detect,
     DWConv,
     DWConvTranspose2d,
+    Detect,
+    ELAN1,
     Focus,
     GhostBottleneck,
     GhostConv,
@@ -55,15 +50,21 @@ from ultralytics.nn.modules import (
     ImagePoolingAttn,
     Index,
     LRPCHead,
+    OBB,
+    OBB26,
+    PSA,
     Pose,
     Pose26,
+    RTDETRDecoder,
     RepC3,
     RepConv,
     RepNCSPELAN4,
     RepVGGDW,
     ResNetLayer,
-    RTDETRDecoder,
     SCDown,
+    SPP,
+    SPPELAN,
+    SPPF,
     Segment,
     Segment26,
     TorchVision,
@@ -1645,6 +1646,9 @@ def parse_model(d, ch, verbose=True):
                 legacy = False
         elif m is AIFI:
             args = [ch[f], *args]
+        elif m is CBAM:
+            c1 = ch[f]
+            args = [c1, *args]
         elif m in frozenset({HGStem, HGBlock}):
             c1, cm, c2 = ch[f], args[0], args[1]
             args = [c1, cm, c2, *args[2:]]
