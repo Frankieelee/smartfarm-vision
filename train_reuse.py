@@ -1,79 +1,45 @@
 """
-YOLO11 训练脚本 - 针对密集小目标优化 + CBAM 注意力
-数据集：seedTrueLeaf (58张训练图，4张验证图，200+个小目标/图)
-优化目标：从 24% mAP50 提升到 60-75%
+YOLO11 继续训练脚本 - 基于已训练的 best.pt
 """
 
 from ultralytics import YOLO
 import os
 from datetime import datetime
 from pathlib import Path
-import torch
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 if __name__ == '__main__':
-    # ========== 生成实验名称 ==========
-    data_path = '/root/autodl-tmp/seedTrue4i/data.yaml'
-    dataset_name = Path(data_path).parent.name
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    model_name_path = 'ultralytics/cfg/models/sf/yolo11n_cbam.yaml'
-    model_name = os.path.basename(model_name_path).replace('.yaml', '')
-    experiment_name = f"{dataset_name}_{model_name}_640_{timestamp}"
+    # ========== 配置 ==========
+    # 之前训练的最佳权重
+    pretrained_best = '/root/autodl-tmp/sf-vision/smartfarm-vision/runs/detect/runs/train/seedTrue4i_yolo11n_cbam_640_20260127_123449/weights/best.pt'
     
-    print(f"📁 实验名称: {experiment_name}")
+    data_path = '/root/autodl-tmp/seedTrue4i/data.yaml'
+    
+    # 从 pretrained_best 路径中提取原始实验名称
+    pretrained_path = Path(pretrained_best)
+    original_experiment_name = pretrained_path.parent.parent.name  # 获取 seedTrue4i_yolo11n_cbam_640_20260127_123449
+    
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    experiment_name = f"{original_experiment_name}_continue_{timestamp}"
+    
+    print(f"📁 原始实验: {original_experiment_name}")
+    print(f"📁 新实验名称: {experiment_name}")
     print(f"📂 保存路径: runs/train/{experiment_name}/")
+    print(f"🔄 继续训练自: {pretrained_best}")
     print("="*60 + "\n")
     
-    # ========== 模型初始化（带预训练权重迁移）==========
-    print("🔧 初始化模型...")
-    
-    # 1. 创建新模型（带 CBAM）
-    model = YOLO(model_name_path)
-    
-    # 2. 加载预训练权重（部分迁移）
-    pretrained_path = 'yolo11n.pt'  # 官方预训练权重
-    
-    if os.path.exists(pretrained_path):
-        print(f"📥 加载预训练权重: {pretrained_path}")
-        
-        # 加载预训练权重
-        # pretrained = torch.load(pretrained_path, map_location='cpu')
-        pretrained = torch.load(pretrained_path, map_location='cpu', weights_only=False)
-        pretrained_state = pretrained['model'].state_dict() if 'model' in pretrained else pretrained
-        
-        # 获取当前模型的 state_dict
-        model_state = model.model.state_dict()
-        
-        # 过滤并加载兼容的权重
-        compatible_state = {}
-        incompatible_keys = []
-        
-        for k, v in pretrained_state.items():
-            if k in model_state and model_state[k].shape == v.shape:
-                compatible_state[k] = v
-            else:
-                incompatible_keys.append(k)
-        
-        # 加载兼容的权重
-        model.model.load_state_dict(compatible_state, strict=False)
-        
-        print(f"✅ 成功加载 {len(compatible_state)}/{len(pretrained_state)} 个权重")
-        print(f"⚠️  跳过 {len(incompatible_keys)} 个不兼容的权重（CBAM 层将随机初始化）")
-        
-        if len(incompatible_keys) <= 10:
-            print(f"   跳过的层: {incompatible_keys}")
-    else:
-        print(f"⚠️  未找到预训练权重: {pretrained_path}")
-        print("   将从头开始训练（随机初始化）")
-    
+    # ========== 加载已训练的模型 ==========
+    print("🔧 加载已训练的模型...")
+    model = YOLO(pretrained_best)
+    print("✅ 模型加载成功！")
     print("="*60 + "\n")
 
-    # ========== 开始训练 ==========
+    # ========== 继续训练 ==========
     results = model.train(
         # ========== 基础配置 ==========
         data=data_path,
-        epochs=1000,
+        epochs=1000,  # 额外训练 1000 个 epoch
         patience=150,
 
         # ========== Batch 与图像尺寸 ==========
@@ -90,7 +56,7 @@ if __name__ == '__main__':
 
         # ========== 优化器配置 ==========
         optimizer='AdamW',
-        lr0=0.001,  # 使用预训练权重可以用稍高的学习率
+        lr0=0.0005,  # 继续训练时使用更小的学习率
         lrf=0.01,
         momentum=0.937,
         weight_decay=0.0005,
@@ -148,9 +114,10 @@ if __name__ == '__main__':
     # ========== 训练完成后的信息 ==========
     output_dir = Path('runs/train') / experiment_name
     print("\n" + "=" * 60)
-    print("🎉 训练完成！")
+    print("🎉 继续训练完成！")
     print("=" * 60)
-    print(f"📁 输出目录: {output_dir}/")
+    print(f"📁 原始实验: {original_experiment_name}")
+    print(f"📁 新实验目录: {output_dir}/")
     print(f"🏆 最佳权重: {output_dir}/weights/best.pt")
     print(f"📊 最终权重: {output_dir}/weights/last.pt")
     print(f"📈 训练曲线: {output_dir}/results.png")
