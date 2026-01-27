@@ -43,7 +43,7 @@ class Logger:
 
 MODEL_CONFIG = {
     'type': 'custom',
-    'path': 'ultralytics/cfg/models/sf/yolo11n_cbam.yaml',
+    'path': 'ultralytics/cfg/models/sf/YOLOv11n-CBAM-P2-DectP2P3-HeadTrue.yaml',
     'pretrained': 'yolo11n.pt',        # 官方预训练权重
 }
 
