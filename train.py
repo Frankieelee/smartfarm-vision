@@ -43,8 +43,8 @@ class Logger:
 
 MODEL_CONFIG = {
     'type': 'custom',
-    'path': 'ultralytics/cfg/models/sf/YOLOv11n-CBAM-P2-DectP2P3-HeadTrue.yaml',
-    'pretrained': 'yolo11n.pt',        # 官方预训练权重
+    'path': '/root/autodl-tmp/sf-vision/smartfarm-vision/ultralytics/cfg/models/sf/yolo11s-cbam-p2-dectp2p3.yaml',
+    'pretrained': 'yolo11s.pt',        # 官方预训练权重
 }
 
 # ========== 快速切换示例 ==========
@@ -74,76 +74,74 @@ MODEL_CONFIG = {
 #    }
 
 # ========== 数据配置 ==========
-DATA_PATH = '/root/autodl-tmp/seedTure7i/data.yaml'
+DATA_PATH = '/root/autodl-tmp/seedTrue9i/data.yaml'
 
 # ========== 训练参数 ==========
 TRAIN_ARGS = {
-    # ========== 基础训练配置 ==========
-    # 'resume': "/path/to/last.pt",  # 恢复训练：从中断的训练继续（包含优化器状态和epoch）
-    'epochs': 2000,                   # 训练轮数：完整遍历数据集的次数
-    'patience': 200,                  # 早停耐心值：多少轮验证指标不提升就停止训练
-    'batch': 8,                       # 批次大小：每次训练使用的图片数量（受GPU显存限制）
-    'imgsz': 640,                     # 输入图像尺寸：训练时图片会被缩放到此大小
+    # ========== 基础配置 ==========
+    'epochs': 2000,
+    'patience': 300,              # 增加耐心值（小目标收敛慢）
+    'batch': 8,                  # 增大batch（如果显存允许）
+    'imgsz': 800,                 # 🔥 提高分辨率！关键改进
     
-    # ========== 设备与性能 ==========
-    'device': 0,                      # GPU设备：0表示第一块GPU，'cpu'表示使用CPU
-    'workers': 6,                     # 数据加载线程数：并行加载数据（通常设为CPU核心数）
-    'cache': 'ram',                   # 数据缓存：'ram'缓存到内存，'disk'缓存到硬盘，False不缓存
-    'amp': False,                     # 混合精度训练：True可节省显存但可能影响精度
+    # ========== 设备 ==========
+    'device': 0,
+    'workers': 6,
+    'cache': 'ram',
+    'amp': False,                 # 小目标建议关闭混合精度
     
-    # ========== 优化器配置 ==========
-    'optimizer': 'AdamW',             # 优化器类型：AdamW、SGD、Adam等
-    'lr0': 0.001,                     # 初始学习率：控制权重更新步长（迁移学习用0.001，从头训练用0.01）
-    'lrf': 0.01,                      # 最终学习率比例：最终学习率 = lr0 * lrf
-    'momentum': 0.937,                # 动量：SGD优化器的动量参数（AdamW不使用）
-    'weight_decay': 0.0005,           # 权重衰减：L2正则化系数，防止过拟合
+    # ========== 优化器（小目标专用） ==========
+    'optimizer': 'AdamW',
+    'lr0': 0.0005,                # 🔥 降低学习率（更稳定）
+    'lrf': 0.001,                 # 🔥 更小的最终学习率
+    'momentum': 0.937,
+    'weight_decay': 0.0001,       # 🔥 减小正则化（避免欠拟合）
     
-    # ========== 学习率预热 ==========
-    'warmup_epochs': 3.0,             # 预热轮数：前N轮学习率从0逐渐增加到lr0（稳定训练初期）
-    'warmup_momentum': 0.8,           # 预热动量：预热阶段的动量值
-    'warmup_bias_lr': 0.1,            # 预热偏置学习率：预热阶段bias层的学习率
-    'cos_lr': True,                   # 余弦学习率衰减：学习率按余弦曲线衰减（推荐开启）
+    # ========== 学习率策略 ==========
+    'warmup_epochs': 5.0,         # 🔥 增加预热（稳定训练）
+    'warmup_momentum': 0.8,
+    'warmup_bias_lr': 0.05,       # 🔥 降低bias预热学习率
+    'cos_lr': True,
     
-    # ========== 损失函数权重 ==========
-    'box': 7.5,                       # 边界框损失权重：检测框位置损失的权重（小目标可适当增大）
-    'cls': 0.3,                       # 分类损失权重：类别预测损失的权重
-    'dfl': 2.0,                       # DFL损失权重：Distribution Focal Loss权重（提高定位精度）
-    'nbs': 64,                        # 标称批次大小：用于自动缩放损失权重（不需要修改）
+    # ========== 损失权重（密集小目标专用） ==========
+    'box': 10.0,                  # 🔥🔥 大幅增加box loss
+    'cls': 0.2,                   # 🔥 降低cls loss（两类相似）
+    'dfl': 3.0,                   # 🔥 增加DFL（提高定位精度）
+    'nbs': 64,
     
-    # ========== 数据增强 - Mosaic/Mixup系列 ==========
-    'mosaic': 1.0,                    # Mosaic增强概率：将4张图拼接成1张（1.0=100%使用，推荐）
-    'mixup': 0.1,                     # MixUp增强概率：混合两张图片（0.1=10%使用）
-    'copy_paste': 0.2,                # Copy-Paste增强概率：复制粘贴目标到其他位置（0.2=20%）
-    'multi_scale': 0.5,               # 多尺度训练范围：随机缩放图像尺寸±50%（增强尺度不变性）
+    # ========== 数据增强（密集场景优化） ==========
+    'mosaic': 0.5,                # 🔥 降低mosaic（密集场景mosaic会更密集）
+    'mixup': 0.0,                 # 🔥 关闭mixup（密集场景不适用）
+    'copy_paste': 0.5,            # 🔥 增加copy_paste（增强小目标）
+    'multi_scale': 0.3,           # 🔥 减小多尺度范围
     
-    # ========== 数据增强 - 几何变换 ==========
-    'degrees': 10.0,                  # 随机旋转角度：±10度（0表示不旋转）
-    'translate': 0.05,                # 随机平移比例：图像宽高的±5%
-    'scale': 0.3,                     # 随机缩放比例：±30%缩放
-    'fliplr': 0.5,                    # 水平翻转概率：50%概率左右翻转
-    'flipud': 0.5,                    # 垂直翻转概率：50%概率上下翻转（一般任务设为0）
-    'perspective': 0.0,               # 透视变换概率：模拟相机视角变化（0表示不使用）
+    # ========== 几何变换（俯视场景） ==========
+    'degrees': 180.0,             # 🔥 俯视可以任意旋转
+    'translate': 0.05,            # 🔥 减小平移（密集场景）
+    'scale': 0.2,                 # 🔥 减小缩放（目标尺寸稳定）
+    'fliplr': 0.5,
+    'flipud': 0.5,                # 🔥 俯视可以上下翻转
+    'perspective': 0.0,           # 俯视不需要透视
     
-    # ========== 数据增强 - 颜色变换 ==========
-    'hsv_h': 0.015,                   # 色调(Hue)增强范围：±0.015（色彩变化）
-    'hsv_s': 0.7,                     # 饱和度(Saturation)增强范围：±0.7（颜色鲜艳度）
-    'hsv_v': 0.4,                     # 明度(Value)增强范围：±0.4（亮度变化）
+    # ========== 颜色增强（减弱） ==========
+    'hsv_h': 0.01,                # 🔥 减小色调变化
+    'hsv_s': 0.3,                 # 🔥 减小饱和度变化
+    'hsv_v': 0.2,                 # 🔥 减小亮度变化
     
     # ========== 高级设置 ==========
-    'close_mosaic': 10,               # 停止Mosaic轮数：最后N轮关闭Mosaic增强（让模型适应真实图像）
-    'rect': False,                    # 矩形训练：保持图像原始宽高比（False=正方形padding）
+    'close_mosaic': 50,           # 🔥 提前关闭mosaic
+    'rect': False,
     
-    # ========== 验证与保存 ==========
-    'val': True,                      # 是否验证：每轮训练后在验证集上评估
-    'save': True,                     # 是否保存：保存训练权重
-    'save_period': 10,                # 保存周期：每N轮保存一次权重（-1只保存last和best）
-    'plots': True,                    # 是否绘图：生成训练曲线、混淆矩阵等可视化
-    
-    # ========== 可重复性 ==========
-    'seed': 42,                       # 随机种子：固定随机数保证结果可复现
-    'deterministic': True,            # 确定性训练：使用确定性算法（可能稍慢但结果可复现）
-    'verbose': True,                  # 详细输出：打印详细的训练信息
+    # ========== 其他 ==========
+    'val': True,
+    'save': True,
+    'save_period': 50,            # 🔥 增加保存频率
+    'plots': True,
+    'seed': 42,
+    'deterministic': True,
+    'verbose': True,
 }
+
 
 # ============================================================
 # 训练代码（不用修改）
