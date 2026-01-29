@@ -9,6 +9,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 import torch
+from train_strategy import *
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -31,116 +32,69 @@ class Logger:
         self.terminal.flush()
         self.log_file.flush()
 
+
+
+
 # ============================================================
-# 🔧 配置区域 - 修改这里的参数
+# 🔧 工具函数
 # ============================================================
 
-# ========== 模型配置 ==========
-# 支持三种训练模式：
-# 1. 'scratch'    - 从头训练：使用yaml，随机初始化（适合：测试新架构）
-# 2. 'pretrained' - 预训练模型：直接用.pt（适合：标准YOLO训练）
-# 3. 'custom'     - 自定义+迁移：yaml+预训练权重（适合：改架构+迁移学习）
-
-MODEL_CONFIG = {
-    'type': 'custom',
-    'path': '/root/autodl-tmp/sf-vision/smartfarm-vision/ultralytics/cfg/models/sf/yolo11s-cbam-p2-dectp2p3.yaml',
-    'pretrained': 'yolo11s.pt',        # 官方预训练权重
-}
-
-# ========== 快速切换示例 ==========
-# 
-# 📌 模式1️⃣: 从头训练（learn from scratch）
-#    用途：测试新架构、不需要迁移学习时使用
-#    MODEL_CONFIG = {
-#        'type': 'scratch',
-#        'path': 'ultralytics/cfg/models/sf/yolo26_p2_cbam.yaml',
-#    }
-# 
-# 📌 模式2️⃣: 使用预训练模型
-#    用途：使用官方权重或之前训练好的完整模型
-#    MODEL_CONFIG = {
-#        'type': 'pretrained',
-#        'path': 'yolo26n.pt',              # 官方预训练
-#        # 或 'path': 'runs/train/exp1/weights/best.pt'  # 自己的训练结果
-#    }
-# 
-# 📌 模式3️⃣: 自定义架构 + 迁移学习
-#    用途：修改架构（如添加CBAM）+ 加载预训练权重做迁移学习
-#    MODEL_CONFIG = {
-#        'type': 'custom',
-#        'path': 'ultralytics/cfg/models/sf/yolo26_p2_cbam.yaml',
-#        'pretrained': 'yolo26n.pt',        # 官方预训练权重
-#        # 或 'pretrained': 'runs/train/exp1/weights/epoch800.pt'  # 之前的checkpoint
-#    }
-
-# ========== 数据配置 ==========
-DATA_PATH = '/root/autodl-tmp/seedTrue9i/data.yaml'
-
-# ========== 训练参数 ==========
-TRAIN_ARGS = {
-    # ========== 基础配置 ==========
-    'epochs': 2000,
-    'patience': 300,              # 增加耐心值（小目标收敛慢）
-    'batch': 8,                  # 增大batch（如果显存允许）
-    'imgsz': 800,                 # 🔥 提高分辨率！关键改进
+def freeze_layers(model, freeze_config):
+    """
+    冻结模型的指定层，只训练 detection head
     
-    # ========== 设备 ==========
-    'device': 0,
-    'workers': 6,
-    'cache': 'ram',
-    'amp': False,                 # 小目标建议关闭混合精度
+    Args:
+        model: YOLO 模型实例
+        freeze_config: 冻结配置字典
     
-    # ========== 优化器（小目标专用） ==========
-    'optimizer': 'AdamW',
-    'lr0': 0.0005,                # 🔥 降低学习率（更稳定）
-    'lrf': 0.001,                 # 🔥 更小的最终学习率
-    'momentum': 0.937,
-    'weight_decay': 0.0001,       # 🔥 减小正则化（避免欠拟合）
+    Returns:
+        tuple: (冻结的参数数量, 可训练的参数数量)
+    """
+    if not freeze_config.get('freeze_backbone', False):
+        print("⚠️  未启用 backbone 冻结，所有层都将训练")
+        return 0, sum(p.numel() for p in model.model.parameters() if p.requires_grad)
     
-    # ========== 学习率策略 ==========
-    'warmup_epochs': 5.0,         # 🔥 增加预热（稳定训练）
-    'warmup_momentum': 0.8,
-    'warmup_bias_lr': 0.05,       # 🔥 降低bias预热学习率
-    'cos_lr': True,
+    freeze_layers_list = freeze_config.get('freeze_layers', 10)
     
-    # ========== 损失权重（密集小目标专用） ==========
-    'box': 10.0,                  # 🔥🔥 大幅增加box loss
-    'cls': 0.2,                   # 🔥 降低cls loss（两类相似）
-    'dfl': 3.0,                   # 🔥 增加DFL（提高定位精度）
-    'nbs': 64,
+    # 如果是数字，转换为列表
+    if isinstance(freeze_layers_list, int):
+        freeze_layers_list = list(range(freeze_layers_list))
     
-    # ========== 数据增强（密集场景优化） ==========
-    'mosaic': 0.5,                # 🔥 降低mosaic（密集场景mosaic会更密集）
-    'mixup': 0.0,                 # 🔥 关闭mixup（密集场景不适用）
-    'copy_paste': 0.5,            # 🔥 增加copy_paste（增强小目标）
-    'multi_scale': 0.3,           # 🔥 减小多尺度范围
+    print(f"\n{'='*60}")
+    print(f"❄️  冻结 Backbone 配置")
+    print(f"{'='*60}")
+    print(f"🔒 将冻结前 {len(freeze_layers_list)} 层")
     
-    # ========== 几何变换（俯视场景） ==========
-    'degrees': 180.0,             # 🔥 俯视可以任意旋转
-    'translate': 0.05,            # 🔥 减小平移（密集场景）
-    'scale': 0.2,                 # 🔥 减小缩放（目标尺寸稳定）
-    'fliplr': 0.5,
-    'flipud': 0.5,                # 🔥 俯视可以上下翻转
-    'perspective': 0.0,           # 俯视不需要透视
+    # 获取模型的所有层
+    total_layers = len(list(model.model.model))
+    print(f"📊 模型总层数: {total_layers}")
+    print(f"🎯 冻结层: {freeze_layers_list}")
+    print(f"🔥 可训练层: {list(range(max(freeze_layers_list) + 1, total_layers))}")
     
-    # ========== 颜色增强（减弱） ==========
-    'hsv_h': 0.01,                # 🔥 减小色调变化
-    'hsv_s': 0.3,                 # 🔥 减小饱和度变化
-    'hsv_v': 0.2,                 # 🔥 减小亮度变化
+    # 冻结指定层
+    frozen_params = 0
+    trainable_params = 0
     
-    # ========== 高级设置 ==========
-    'close_mosaic': 50,           # 🔥 提前关闭mosaic
-    'rect': False,
+    for idx, (name, module) in enumerate(model.model.model.named_children()):
+        if idx in freeze_layers_list:
+            # 冻结该层的所有参数
+            for param in module.parameters():
+                param.requires_grad = False
+                frozen_params += param.numel()
+            print(f"   ❄️  层 {idx:2d} ({name:15s}): 已冻结 ({sum(p.numel() for p in module.parameters()):,} 参数)")
+        else:
+            # 保持该层可训练
+            for param in module.parameters():
+                param.requires_grad = True
+                trainable_params += param.numel()
+            print(f"   🔥 层 {idx:2d} ({name:15s}): 可训练 ({sum(p.numel() for p in module.parameters()):,} 参数)")
     
-    # ========== 其他 ==========
-    'val': True,
-    'save': True,
-    'save_period': 50,            # 🔥 增加保存频率
-    'plots': True,
-    'seed': 42,
-    'deterministic': True,
-    'verbose': True,
-}
+    print(f"\n📊 参数统计:")
+    print(f"   ❄️  冻结参数: {frozen_params:,} ({frozen_params / (frozen_params + trainable_params) * 100:.1f}%)")
+    print(f"   🔥 可训练参数: {trainable_params:,} ({trainable_params / (frozen_params + trainable_params) * 100:.1f}%)")
+    print(f"{'='*60}\n")
+    
+    return frozen_params, trainable_params
 
 
 # ============================================================
@@ -148,10 +102,27 @@ TRAIN_ARGS = {
 # ============================================================
 
 if __name__ == '__main__':
-    # ========== 模型初始化 ==========
+    # ========== 显示配置信息 ==========
     print("="*60)
     print("🚀 YOLO训练配置")
     print("="*60)
+    
+    # 显示冻结状态
+    if FREEZE_CONFIG.get('freeze_backbone', False):
+        freeze_layers_count = FREEZE_CONFIG.get('freeze_layers', 10)
+        if isinstance(freeze_layers_count, int):
+            print(f"❄️  Backbone 冻结: 启用 (前 {freeze_layers_count} 层)")
+        else:
+            print(f"❄️  Backbone 冻结: 启用 (共 {len(freeze_layers_count)} 层)")
+    else:
+        print(f"🔥 Backbone 冻结: 禁用 (全量训练)")
+    
+    print(f"📊 数据增强方案: {SELECTED_AUGMENTATION.upper()}")
+    
+    # 重新获取训练参数（确保使用最新配置）
+    TRAIN_ARGS = get_train_args()
+    
+    print("-"*60)
     
     model_path = MODEL_CONFIG['path']
     model_type = MODEL_CONFIG['type']
@@ -244,14 +215,35 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"不支持的模型类型: {model_type}，请使用 'scratch', 'pretrained', 'custom'")
     
+    # ========== 冻结 Backbone（如果启用）==========
+    frozen_params, trainable_params = freeze_layers(model, FREEZE_CONFIG)
+    
     # ========== 生成实验名称 ==========
     dataset_name = Path(DATA_PATH).parent.name
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    experiment_name = f"{dataset_name}_{model_name}_{TRAIN_ARGS['imgsz']}_{timestamp}"
+    
+    # 如果冻结了 backbone，在实验名称中标注
+    freeze_suffix = ""
+    if FREEZE_CONFIG.get('freeze_backbone', False):
+        freeze_layers_count = FREEZE_CONFIG.get('freeze_layers', 10)
+        if isinstance(freeze_layers_count, int):
+            freeze_suffix = f"_freeze{freeze_layers_count}"
+        else:
+            freeze_suffix = f"_freeze{len(freeze_layers_count)}"
+    
+    experiment_name = f"{dataset_name}_{model_name}_{TRAIN_ARGS['imgsz']}{freeze_suffix}_{timestamp}"
     
     print(f"📊 数据集: {dataset_name}")
     print(f"🎯 实验名称: {experiment_name}")
     print(f"📂 保存路径: runs/train/{experiment_name}/")
+    
+    # 显示冻结状态
+    if FREEZE_CONFIG.get('freeze_backbone', False):
+        print(f"❄️  Backbone 状态: 已冻结 ({frozen_params:,} 参数)")
+        print(f"🔥 可训练参数: {trainable_params:,} 参数")
+        print(f"💡 建议: 使用较小的学习率 (当前: lr0={TRAIN_ARGS['lr0']})")
+    else:
+        print(f"🔥 训练模式: 全部参数可训练")
     
     # ========== 设置日志保存 ==========
     original_stdout = sys.stdout
