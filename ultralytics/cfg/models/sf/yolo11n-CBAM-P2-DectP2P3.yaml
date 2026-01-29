@@ -8,9 +8,9 @@
 # 3. YOLOv26风格SPPF - 更强的多尺度特征融合
 # 4. 更轻量、更快的推理速度
 
-scale: n
 
 nc: 2  # seed_leaf, true_leaf
+scale: n
 scales: # model compound scaling constants
   # [depth, width, max_channels]
   n: [0.50, 0.25, 1024]
