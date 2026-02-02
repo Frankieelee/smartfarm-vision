@@ -14,12 +14,12 @@ import json
 # ============================================================
 
 # 模型配置
-MODEL_PATH = '/tmp/pycharm_project_990/runs/detect/runs/train/datasets_yolo11m_800_20260128_151115/weights/best.pt'
+MODEL_PATH = '/tmp/pycharm_project_949/runs/detect/runs/train/seedTrueLeaf.v12i.yolov11_yolo11s_800_20260201_115437/weights/best.pt'
 
 # 数据集配置（支持多个数据集）
 DATASETS = {
-    'val': './datasets/data.yaml',        # 验证集（默认）
-    'train': './datasets/data.yaml',      # 训练集（检查过拟合）
+    'val': './datasets/seedTrueLeaf.v12i.yolov11/data.yaml',       # 验证集（默认）
+    'train': './datasets/seedTrueLeaf.v12i.yolov11/data.yaml',     # 训练集（检查过拟合）
     # 'test': './path/to/test/data.yaml', # 测试集（如果有）
 }
 

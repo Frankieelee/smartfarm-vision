@@ -9,10 +9,16 @@
 # 3. 'custom'     - 自定义架构 + 可选预训练（如 'yolo11s_cbam.yaml' + 'yolo11s.pt'）
 
 # 示例 3: 训练自定义架构（如 yolo11s-cbam），从零开始
+# MODEL_CONFIG = {
+#     'type': 'pretrained',
+#     'path': '/tmp/pycharm_project_949/runs/detect/runs/train/seedTrueLeaf.v12i.yolov11_yolo11s_800_20260201_131735/weights/best.pt',
+# }
+
 MODEL_CONFIG = {
-    'type': 'custom',
-    'path': 'ultralytics/cfg/models/sf/yolo11s_masf.yaml',
+    'type': 'scratch',
+    'path': 'ultralytics/cfg/models/26/yolo26-p2.yaml',
 }
+
 
 # ============================================================
 # 📋 配置模板示例
@@ -47,7 +53,7 @@ MODEL_CONFIG = {
 # ============================================================
 # 数据配置
 # ============================================================
-DATA_PATH = './datasets/seedTrueLeaf.v11i.yolov11/data.yaml'
+DATA_PATH = './datasets/seedTrueLeaf.v13i.yolov11/data.yaml'
 
 # ============================================================
 # 冻结配置
@@ -66,7 +72,7 @@ FREEZE_CONFIG = {
 # 数据增强方案
 # ============================================================
 # 100张图片 + 冻结训练 → 推荐 aggressive（强数据增强）
-SELECTED_AUGMENTATION = 'balanced'  # 'balanced' | 'aggressive' | 'conservative'
+SELECTED_AUGMENTATION = 'conservative'  # 'balanced' | 'aggressive' | 'conservative'
 
 AUGMENTATION_PRESETS = {
     'balanced': {
@@ -125,7 +131,7 @@ AUGMENTATION_PRESETS = {
 # 训练参数 - 全量训练
 # ============================================================
 TRAIN_ARGS_FULL = {
-    'epochs': 2000,
+    'epochs': 4000,
     'patience': 300,
     'batch': 4,
     'imgsz': 800,
@@ -142,9 +148,9 @@ TRAIN_ARGS_FULL = {
     'warmup_momentum': 0.8,
     'warmup_bias_lr': 0.05,
     'cos_lr': True,
-    'box': 10.0,
+    'box': 15.0,
     'cls': 0.2,
-    'dfl': 3.0,
+    'dfl': 5.0,
     'nbs': 64,
     'val': True,
     'save': True,
