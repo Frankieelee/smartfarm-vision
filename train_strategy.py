@@ -15,8 +15,8 @@
 # }
 
 MODEL_CONFIG = {
-    'type': 'scratch',
-    'path': 'ultralytics/cfg/models/26/yolo26-p2.yaml',
+    'type': 'pretrained',
+    'path': 'yolo11s.pt',
 }
 
 
@@ -53,7 +53,7 @@ MODEL_CONFIG = {
 # ============================================================
 # 数据配置
 # ============================================================
-DATA_PATH = './datasets/seedTrueLeaf.v13i.yolov11/data.yaml'
+DATA_PATH = '/tmp/dataset/yolo11/v14/data.yaml'
 
 # ============================================================
 # 冻结配置
@@ -72,7 +72,7 @@ FREEZE_CONFIG = {
 # 数据增强方案
 # ============================================================
 # 100张图片 + 冻结训练 → 推荐 aggressive（强数据增强）
-SELECTED_AUGMENTATION = 'conservative'  # 'balanced' | 'aggressive' | 'conservative'
+SELECTED_AUGMENTATION = 'minimal'  # 'balanced' | 'aggressive' | 'conservative' | 'minimal' | 'none'
 
 AUGMENTATION_PRESETS = {
     'balanced': {
@@ -124,6 +124,40 @@ AUGMENTATION_PRESETS = {
         'hsv_s': 0.3,
         'hsv_v': 0.2,
         'rect': False,
+    },
+    
+    'minimal': {
+        'mosaic': 0.0,          # ❌ 不拼接图像
+        'mixup': 0.0,           # ❌ 不混合图像
+        'copy_paste': 0.0,      # ❌ 不复制粘贴
+        'close_mosaic': 0,      # ❌ 立即关闭
+        'multi_scale': 0.2,     # 🔵 轻微多尺度（0.8-1.2倍）
+        'degrees': 0.0,         # ❌ 不旋转（避免留白）
+        'translate': 0.0,       # ❌ 不平移（避免留白）
+        'fliplr': 0.5,          # ✅ 左右翻转（无留白）
+        'flipud': 0.5,          # ✅ 上下翻转（无留白）
+        'perspective': 0.0,     # ❌ 不透视变换
+        'hsv_h': 0.005,         # 🔵 轻微色调调整
+        'hsv_s': 0.2,           # 🔵 轻微饱和度调整
+        'hsv_v': 0.1,           # 🔵 轻微明度调整
+        'rect': False,          # 矩形训练
+    },
+    
+    'none': {
+        'mosaic': 0.0,
+        'mixup': 0.0,
+        'copy_paste': 0.0,
+        'close_mosaic': 0,
+        'multi_scale': 0.0,
+        'degrees': 0.0,
+        'translate': 0.0,
+        'fliplr': 0.0,
+        'flipud': 0.0,
+        'perspective': 0.0,
+        'hsv_h': 0.0,
+        'hsv_s': 0.0,
+        'hsv_v': 0.0,
+        'rect': True,
     },
 }
 

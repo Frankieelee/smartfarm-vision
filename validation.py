@@ -14,12 +14,12 @@ import json
 # ============================================================
 
 # 模型配置
-MODEL_PATH = '/tmp/pycharm_project_949/runs/detect/runs/train/seedTrueLeaf.v12i.yolov11_yolo11s_800_20260201_115437/weights/best.pt'
+MODEL_PATH = '/tmp/dataset/yolo11s-0.8-1.pt'
 
 # 数据集配置（支持多个数据集）
 DATASETS = {
-    'val': './datasets/seedTrueLeaf.v12i.yolov11/data.yaml',       # 验证集（默认）
-    'train': './datasets/seedTrueLeaf.v12i.yolov11/data.yaml',     # 训练集（检查过拟合）
+    'val': '/tmp/dataset/yolo11/v13/data.yaml',       # 验证集（默认）
+    'train': '/tmp/dataset/yolo11/v13/data.yaml',     # 训练集（检查过拟合）
     # 'test': './path/to/test/data.yaml', # 测试集（如果有）
 }
 
@@ -100,7 +100,7 @@ def validate_on_dataset(model, dataset_name, data_yaml, split='val'):
             if img_dir.exists():
                 num_images = len(list(img_dir.glob('*.jpg')) + list(img_dir.glob('*.png')) + 
                                 list(img_dir.glob('*.jpeg')) + list(img_dir.glob('*.JPG')))
-    
+
     metrics = {
         'dataset': dataset_name,
         'split': split,
@@ -132,7 +132,7 @@ def validate_on_dataset(model, dataset_name, data_yaml, split='val'):
     print(f"  mAP50-95: {metrics['metrics']['mAP50-95']:.3f}")
     print(f"  Precision: {metrics['metrics']['precision']:.3f}")
     print(f"  Recall:    {metrics['metrics']['recall']:.3f}")
-    
+
     if metrics['per_class']:
         print(f"\n  每类别 AP50:")
         for class_name, class_metrics in metrics['per_class'].items():
@@ -248,7 +248,7 @@ def main():
         print(f"\n📋 汇总表格:")
         print(df.to_string(index=False))
         print(f"\n💾 CSV 保存到: {csv_file}")
-    
+
     print(f"\n{'='*60}")
     print(f"🎉 所有验证完成！")
     print(f"{'='*60}")
