@@ -44,7 +44,7 @@ head:
   - [[-1, 10], 1, Concat, [1]] # cat head P5
   - [-1, 2, C3k2, [1024, True]] # 22 (P5/32-large)
 
-  - [16, 1, CBAM, [7]]  # P3: kernel_size=7
-  - [19, 1, CBAM, [7]]  # P4: kernel_size=7
-  - [22, 1, CBAM, [7]]  # P5: kernel_size=7
+  - [16, 1, CBAM, [7]] # P3: kernel_size=7
+  - [19, 1, CBAM, [7]] # P4: kernel_size=7
+  - [22, 1, CBAM, [7]] # P5: kernel_size=7
   - [[23, 24, 25], 1, Detect, [nc]] # Detect(P3, P4, P5)
